@@ -5,6 +5,8 @@
 **Руководитель:** Колесников Иван Артемович  
 **Светлогорск, 2026**
 
+**Telegram-бот (Mini App):** [@patriot_by_putevod_bot](https://t.me/patriot_by_putevod_bot)
+
 ---
 
 ## СОДЕРЖАНИЕ
