@@ -1,0 +1,13 @@
+static/
+*.zip
+*.exe
+*.log
+__pycache__/
+.git/
+.venv/
+venv/
+weights/
+backup/
+cloudflared
+patriot.db
+ddcolor_repo/

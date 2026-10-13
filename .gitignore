@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.log
+.env
+.env_keys.json
+active_chats.json
+public_url.txt
+cloudflared
+cloudflared.exe
+weights/*.pth
+weights/*.pt
+weights/*.onnx
+static/uploads/
+*.zip

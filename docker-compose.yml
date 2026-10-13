@@ -1,0 +1,15 @@
+name: patriot
+
+services:
+  patriot-miniapp:
+    build: .
+    container_name: patriot-miniapp
+    restart: unless-stopped
+    ports:
+      - "8085:8000"
+    security_opt:
+      - label=disable
+    volumes:
+      - ".:/app"
+    environment:
+      - PYTHONUNBUFFERED=1

@@ -1,0 +1,3357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Патриот — Историческая карта</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <link rel="stylesheet" href="/static/leaflet.css" />
+  <script src="/static/leaflet.js"></script>
+
+  <style>
+    :root {
+      --tg-bg: var(--tg-theme-bg-color, #ffffff);
+      --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f1f1f5);
+      --tg-section-bg: var(--tg-theme-section-bg-color, #ffffff);
+      --tg-text: var(--tg-theme-text-color, #000000);
+      --tg-hint: var(--tg-theme-hint-color, #8e8e93);
+      --tg-link: var(--tg-theme-link-color, #007aff);
+      --tg-button: var(--tg-theme-button-color, #007aff);
+      --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+      --tg-section-header: var(--tg-theme-section-header-text-color, #6d6d72);
+      --tg-separator: var(--tg-theme-section-separator-color, #c8c7cc);
+      --tg-destructive: var(--tg-theme-destructive-text-color, #ff3b30);
+      --tg-bottom-bar: var(--tg-theme-bottom-bar-bg-color, #ffffff);
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Roboto", "Helvetica Neue", Arial, sans-serif;
+      --radius-card: 12px;
+      --radius-control: 10px;
+    }
+
+    body.tg-dark {
+      --tg-bg: var(--tg-theme-bg-color, #1c1c1e);
+      --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #000000);
+      --tg-section-bg: var(--tg-theme-section-bg-color, #1c1c1e);
+      --tg-text: var(--tg-theme-text-color, #ffffff);
+      --tg-hint: var(--tg-theme-hint-color, #8e8e93);
+      --tg-link: var(--tg-theme-link-color, #0a84ff);
+      --tg-button: var(--tg-theme-button-color, #0a84ff);
+      --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+      --tg-section-header: var(--tg-theme-section-header-text-color, #8e8e93);
+      --tg-separator: var(--tg-theme-section-separator-color, #38383a);
+      --tg-bottom-bar: var(--tg-theme-bottom-bar-bg-color, #1c1c1e);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    svg {
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .tg-header {
+      background-color: var(--tg-bg);
+      border-bottom: 0.5px solid var(--tg-separator);
+      padding: 8px 12px 0;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .tg-search-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .tg-search-field {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background-color: var(--tg-secondary-bg);
+      border-radius: 10px;
+      padding: 0 10px;
+      height: 36px;
+      gap: 8px;
+      color: var(--tg-hint);
+    }
+
+    .tg-search-field input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      outline: none;
+      color: var(--tg-text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+    }
+
+    .tg-search-field input::placeholder {
+      color: var(--tg-hint);
+    }
+
+    .tg-city-tag {
+      font-size: 13px;
+      color: var(--tg-hint);
+      padding-left: 8px;
+      border-left: 1px solid var(--tg-separator);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .tg-bar-btn {
+      height: 36px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: none;
+      background-color: var(--tg-button);
+      color: var(--tg-button-text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .tg-bar-btn.secondary {
+      background-color: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      padding: 0 10px;
+    }
+
+    .tg-folder-tabs {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 2px;
+    }
+    .tg-folder-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tg-folder-tab {
+      position: relative;
+      height: 38px;
+      padding: 0 2px;
+      border: none;
+      background: transparent;
+      color: var(--tg-hint);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: color 0.15s ease;
+    }
+
+    .tg-folder-tab.active {
+      color: var(--tg-link);
+      font-weight: 600;
+    }
+
+    .tg-folder-tab.active::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background-color: var(--tg-link);
+      border-radius: 3px 3px 0 0;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      z-index: 1;
+      background: var(--tg-secondary-bg);
+    }
+
+    .leaflet-attribution-flag {
+      display: none !important;
+    }
+
+    @keyframes tgMarkerPop {
+      0% {
+        opacity: 0;
+        transform: scale(0.35) translateY(10px);
+      }
+      70% {
+        opacity: 1;
+        transform: scale(1.08) translateY(-2px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes tgMarkerPulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 122, 255, 0), 0 2px 6px rgba(0, 0, 0, 0.3); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0), 0 2px 6px rgba(0, 0, 0, 0.3); }
+    }
+
+    .tg-marker {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+      animation: tgMarkerPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+      will-change: transform;
+    }
+    .tg-marker:hover {
+      transform: scale(1.14);
+    }
+    .tg-marker:active {
+      transform: scale(0.92);
+    }
+    .tg-marker.selected {
+      transform: scale(1.22);
+      z-index: 900 !important;
+      animation: tgMarkerPulse 1.8s infinite;
+    }
+    .tg-marker.cat-religious { background-color: #d97706; }
+    .tg-marker.cat-architecture { background-color: #007aff; }
+    .tg-marker.cat-ww2 { background-color: #ff3b30; }
+    .tg-marker.cat-lost { background-color: #5856d6; }
+    .tg-marker.cat-nature { background-color: #34c759; }
+    .tg-marker.cat-archival {
+      background: linear-gradient(135deg, #c88a32, #8f5b14);
+      border-radius: 9px;
+      border: 2px solid #fff3d6;
+      box-shadow: 0 2px 8px rgba(143, 91, 20, 0.45);
+    }
+
+    .tg-route-step {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #007aff;
+      color: #ffffff;
+      border: 2px solid #ffffff;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      animation: tgMarkerPop 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .tg-tabbar {
+      height: calc(54px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      background-color: var(--tg-bottom-bar);
+      border-top: 0.5px solid var(--tg-separator);
+      display: flex;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .tg-tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--tg-hint);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      transition: color 0.18s ease, transform 0.14s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .tg-tab:active {
+      transform: scale(0.92);
+    }
+
+    .tg-tab.active {
+      color: var(--tg-link);
+    }
+
+    .tg-sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.44);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      z-index: 1100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.34s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+      will-change: opacity;
+    }
+
+    .tg-sheet-overlay.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .tg-sheet {
+      width: 100%;
+      max-width: 680px;
+      max-height: 88vh;
+      background-color: var(--tg-secondary-bg);
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.22);
+      transform: translate3d(0, 104%, 0);
+      transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+      will-change: transform;
+    }
+
+    .tg-sheet-overlay.open .tg-sheet {
+      transform: translate3d(0, 0, 0);
+    }
+
+    .tg-sheet-grabber {
+      width: 36px;
+      height: 4px;
+      background-color: var(--tg-separator);
+      border-radius: 2px;
+      margin: 8px auto 0;
+      flex-shrink: 0;
+      cursor: grab;
+    }
+
+    .tg-sheet-header {
+      padding: 10px 16px 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      background-color: var(--tg-secondary-bg);
+      border-bottom: 0.5px solid var(--tg-separator);
+      flex-shrink: 0;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .tg-sheet-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--tg-text);
+      line-height: 1.25;
+    }
+
+    .tg-sheet-caption {
+      font-size: 13px;
+      color: var(--tg-hint);
+      margin-top: 2px;
+    }
+
+    .tg-close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background-color: var(--tg-section-bg);
+      color: var(--tg-hint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.14s ease, background-color 0.14s ease;
+    }
+    .tg-close-btn:active {
+      transform: scale(0.88);
+    }
+
+    .tg-sheet-content {
+      padding: 12px 16px 28px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @keyframes tgTabFadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .tg-tab-pane-anim {
+      animation: tgTabFadeIn 0.22s cubic-bezier(0.32, 0.72, 0, 1) both;
+    }
+
+    .tg-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tg-section-header {
+      font-size: 13px;
+      font-weight: 400;
+      text-transform: uppercase;
+      color: var(--tg-section-header);
+      padding: 0 12px 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .tg-section-card {
+      background-color: var(--tg-section-bg);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+    }
+
+    .tg-cell {
+      padding: 11px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-bottom: 0.5px solid var(--tg-separator);
+    }
+
+    .tg-cell:last-child {
+      border-bottom: none;
+    }
+
+    .tg-cell-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .tg-cell-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--tg-text);
+    }
+
+    .tg-cell-subtitle {
+      font-size: 13px;
+      color: var(--tg-hint);
+    }
+
+    .tg-body-text {
+      font-size: 15px;
+      line-height: 1.48;
+      color: var(--tg-text);
+    }
+
+    .tg-segmented {
+      display: flex;
+      background-color: var(--tg-section-bg);
+      padding: 3px;
+      border-radius: 9px;
+      border: 0.5px solid var(--tg-separator);
+    }
+
+    .tg-segment {
+      flex: 1;
+      height: 30px;
+      border: none;
+      background: transparent;
+      color: var(--tg-text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background-color 0.2s cubic-bezier(0.32, 0.72, 0, 1), color 0.2s ease, transform 0.12s ease;
+    }
+    .tg-segment:active {
+      transform: scale(0.96);
+    }
+
+    .tg-segment.active {
+      background-color: var(--tg-button);
+      color: var(--tg-button-text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+    }
+
+    .ba-slider-wrap {
+      position: relative;
+      width: 100%;
+      height: 235px;
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: #111;
+      user-select: none;
+      -webkit-user-select: none;
+      transform: translateZ(0);
+    }
+
+    .ba-slider-wrap img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      will-change: width;
+    }
+
+    .ba-before-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 50%;
+      overflow: hidden;
+      border-right: 1.5px solid #ffffff;
+      z-index: 2;
+      will-change: width;
+    }
+
+    .ba-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      z-index: 3;
+      pointer-events: none;
+      will-change: left;
+    }
+
+    .ba-badge {
+      position: absolute;
+      bottom: 8px;
+      padding: 4px 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      z-index: 4;
+      background: rgba(0, 0, 0, 0.65);
+      color: #ffffff;
+      max-width: calc(100% - 16px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    .ba-badge.left { left: 8px; }
+    .ba-badge.right { right: 8px; }
+
+    .ba-range-input {
+      position: absolute;
+      top: 46px;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 46px);
+      opacity: 0;
+      cursor: ew-resize;
+      z-index: 5;
+      touch-action: pan-y;
+    }
+
+    .tg-gallery-single {
+      position: relative;
+      width: 100%;
+      height: 235px;
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: #111;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: pan-y;
+      transform: translateZ(0);
+    }
+
+    .tg-gallery-single img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      will-change: contents, opacity;
+      transition: opacity 0.12s ease-out;
+    }
+
+    .tg-gallery-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 0.5px solid rgba(255, 255, 255, 0.22);
+      background: rgba(0, 0, 0, 0.58);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 8;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s ease, background-color 0.12s ease;
+    }
+    .tg-gallery-nav:active {
+      transform: translateY(-50%) scale(0.9);
+      background: rgba(0, 122, 255, 0.85);
+    }
+    .ba-slider-wrap .tg-gallery-nav {
+      top: 10px;
+      transform: none;
+      width: 32px;
+      height: 32px;
+      z-index: 9;
+    }
+    .ba-slider-wrap .tg-gallery-nav:active {
+      transform: scale(0.9);
+    }
+    .tg-gallery-nav.prev { left: 8px; }
+    .tg-gallery-nav.next { right: 8px; }
+
+    .tg-gen-progress-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 12px;
+      margin-top: 4px;
+      border-radius: 10px;
+      background: var(--tg-secondary-bg);
+      border: 0.5px solid var(--tg-separator);
+    }
+    .tg-gen-progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .tg-gen-progress-stage {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--tg-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tg-gen-progress-pct {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--tg-button);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .tg-gen-progress-track {
+      position: relative;
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(120, 120, 128, 0.22);
+      overflow: hidden;
+    }
+    .tg-gen-progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--tg-button) 0%, #30b0c7 50%, #34c759 100%);
+      background-size: 200% 100%;
+      animation: tgProgressShimmer 1.8s linear infinite;
+      transition: width 0.18s ease-out;
+    }
+    @keyframes tgProgressShimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    .tg-gen-progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--tg-hint);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tg-thumb-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 6px 2px 2px 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    .tg-thumb-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tg-thumb-item {
+      position: relative;
+      width: 68px;
+      height: 50px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: 2px solid transparent;
+      opacity: 0.68;
+      background: #1c1c1e;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s ease, opacity 0.12s ease, border-color 0.12s ease;
+    }
+    .tg-thumb-item:active {
+      transform: scale(0.94);
+    }
+    .tg-thumb-item.active {
+      border-color: var(--tg-button);
+      opacity: 1;
+      transform: scale(1.02);
+    }
+    .tg-thumb-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+    .tg-thumb-tag {
+      position: absolute;
+      bottom: 2px;
+      left: 2px;
+      right: 2px;
+      background: rgba(0, 0, 0, 0.72);
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 600;
+      text-align: center;
+      border-radius: 4px;
+      padding: 1px 2px;
+      line-height: 1.1;
+      pointer-events: none;
+    }
+
+    .tg-input, .tg-select, .tg-textarea {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--tg-text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      outline: none;
+      padding: 4px 0;
+    }
+
+    .tg-input::placeholder, .tg-textarea::placeholder {
+      color: var(--tg-hint);
+    }
+
+    .tg-btn {
+      height: 44px;
+      padding: 0 16px;
+      border-radius: var(--radius-control);
+      border: none;
+      background-color: var(--tg-button);
+      color: var(--tg-button-text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      transition: transform 0.14s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease, background-color 0.16s ease;
+    }
+    .tg-btn:active:not(:disabled) {
+      transform: scale(0.975);
+    }
+
+    .tg-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .tg-btn.secondary {
+      background-color: var(--tg-section-bg);
+      color: var(--tg-link);
+      border: 0.5px solid var(--tg-separator);
+    }
+
+    .tg-btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tg-chat-list {
+      max-height: 240px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background-color: var(--tg-secondary-bg);
+      border-radius: var(--radius-card);
+    }
+
+    @keyframes tgBubblePop {
+      0% { opacity: 0; transform: translateY(6px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .tg-bubble {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.4;
+      animation: tgBubblePop 0.22s cubic-bezier(0.32, 0.72, 0, 1) both;
+    }
+
+    .tg-bubble.incoming {
+      align-self: flex-start;
+      background-color: var(--tg-section-bg);
+      color: var(--tg-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .tg-bubble.outgoing {
+      align-self: flex-end;
+      background-color: var(--tg-button);
+      color: var(--tg-button-text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .tg-route-banner {
+      position: fixed;
+      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+      left: 12px;
+      right: 12px;
+      z-index: 950;
+      background-color: var(--tg-section-bg);
+      border: 0.5px solid var(--tg-separator);
+      border-radius: var(--radius-card);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translate3d(0, 22px, 0) scale(0.97);
+      transition: opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1), transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.28s ease;
+    }
+    .tg-route-banner.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    body.kiosk-mode .kiosk-hide {
+      display: none !important;
+    }
+    .kiosk-bar {
+      display: none;
+      background-color: var(--tg-destructive);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 2000;
+    }
+    body.kiosk-mode .kiosk-bar {
+      display: block;
+    }
+
+    .tg-snackbar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translate3d(-50%, -20px, 0) scale(0.95);
+      background-color: rgba(28, 28, 30, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #ffffff;
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 3000;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+      transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.24s ease;
+    }
+    .tg-snackbar.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translate3d(-50%, 0, 0) scale(1);
+    }
+
+    .tg-city-explore-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate3d(-50%, -46%, 0) scale(0.95);
+      width: min(92vw, 390px);
+      background: var(--tg-bg);
+      border: 0.5px solid var(--tg-separator);
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+      z-index: 2500;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.26s cubic-bezier(0.32, 0.72, 0, 1), transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.26s ease;
+    }
+    .tg-city-explore-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translate3d(-50%, -50%, 0) scale(1);
+    }
+    .tg-city-explore-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .tg-city-explore-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--tg-text);
+      line-height: 1.25;
+    }
+    .tg-city-explore-pct {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--tg-button);
+      font-variant-numeric: tabular-nums;
+    }
+    .tg-city-explore-stage {
+      font-size: 13px;
+      color: var(--tg-hint);
+      line-height: 1.35;
+      margin-bottom: 10px;
+      min-height: 34px;
+    }
+    .tg-city-explore-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 11px;
+    }
+    .tg-source-chip {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--tg-sec-bg);
+      color: var(--tg-hint);
+      transition: background 0.22s ease, color 0.22s ease;
+    }
+    .tg-source-chip.active {
+      background: rgba(36, 129, 204, 0.14);
+      color: var(--tg-button);
+      font-weight: 600;
+    }
+
+    .tg-route-cats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 6px;
+    }
+    .tg-route-cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      border-radius: 9px;
+      border: 1.5px solid var(--tg-separator);
+      background-color: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      user-select: none;
+    }
+    .tg-route-cat-chip.active {
+      border-color: var(--tg-button);
+      background-color: rgba(0, 122, 255, 0.13);
+      color: var(--tg-link);
+      font-weight: 600;
+    }
+    .tg-stop-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+    }
+    .tg-stop-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background-color: var(--tg-secondary-bg);
+      color: var(--tg-hint);
+    }
+    .tg-stop-badge.district {
+      background-color: rgba(0, 122, 255, 0.11);
+      color: var(--tg-link);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="kiosk-bar" onclick="promptExitKiosk()">
+    Режим терминала (Киоск) активен. Нажмите для ввода PIN-кода выхода.
+  </div>
+
+  <div id="snackbar" class="tg-snackbar"></div>
+
+  <div id="cityExploreOverlay" class="tg-city-explore-overlay">
+    <div class="tg-city-explore-head">
+      <div class="tg-city-explore-title" id="cityExploreTitle">Подбор объектов города...</div>
+      <div class="tg-city-explore-pct" id="cityExplorePct">0%</div>
+    </div>
+    <div class="tg-city-explore-stage" id="cityExploreStage">
+      Геокодирование центра города и поиск достопримечательностей Беларуси...
+    </div>
+    <div class="tg-gen-progress-track">
+      <div class="tg-gen-progress-fill" id="cityExploreFillBar"></div>
+    </div>
+    <div class="tg-city-explore-sources">
+      <span class="tg-source-chip active" id="srcChipYandex">Яндекс Карты BY</span>
+      <span class="tg-source-chip" id="srcChipWiki">Википедия RU/BE</span>
+      <span class="tg-source-chip" id="srcChipPastvu">PastVu Архив</span>
+      <span class="tg-source-chip" id="srcChipCommons">Wikimedia WebP</span>
+    </div>
+  </div>
+
+  <header class="tg-header">
+    <div class="tg-search-row">
+      <div class="tg-search-field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Поиск города Беларуси или объекта"
+          onkeydown="if(event.key==='Enter') handleSearchOrExplore()"
+        />
+        <span class="tg-city-tag" id="currentCityLabel" onclick="document.getElementById('searchInput').focus()">Гомель</span>
+      </div>
+      <button class="tg-bar-btn" onclick="handleSearchOrExplore()">Найти</button>
+      <button class="tg-bar-btn secondary" onclick="locateUserGPS()" title="Геолокация">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+        </svg>
+      </button>
+    </div>
+
+    <div class="tg-folder-tabs">
+      <button class="tg-folder-tab active" data-cat="all" onclick="setCategory('all', this)">Все объекты</button>
+      <button class="tg-folder-tab" data-cat="religious" onclick="setCategory('religious', this)">Церковные и храмы</button>
+      <button class="tg-folder-tab" data-cat="architecture" onclick="setCategory('architecture', this)">Исторические и архитектура</button>
+      <button class="tg-folder-tab" data-cat="ww2" onclick="setCategory('ww2', this)">Военные и ВОВ</button>
+      <button class="tg-folder-tab" data-cat="lost" onclick="setCategory('lost', this)">Древние и утраченные</button>
+      <button class="tg-folder-tab" data-cat="nature" onclick="setCategory('nature', this)">Парки и природа</button>
+      <button class="tg-folder-tab" data-cat="archival" onclick="setCategory('archival', this)">Архивные фото</button>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <div id="routeFloatBar" class="tg-route-banner">
+    <div>
+      <div class="tg-cell-title" id="routeFloatTitle">Маршрут</div>
+      <div class="tg-cell-subtitle" id="routeFloatMeta"></div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="tg-bar-btn" onclick="downloadCurrentRoutePDF()">PDF-буклет</button>
+      <button class="tg-bar-btn secondary" onclick="clearActiveRoute()">Закрыть</button>
+    </div>
+  </div>
+
+  <nav class="tg-tabbar">
+    <button class="tg-tab active" onclick="switchNav('map', this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+        <line x1="8" y1="2" x2="8" y2="18"></line>
+        <line x1="16" y1="6" x2="16" y2="22"></line>
+      </svg>
+      <span>Карта</span>
+    </button>
+    <button class="tg-tab" onclick="openDrawer('aiGuideDrawer'); switchNav('guide', this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+      </svg>
+      <span>ИИ-Гид</span>
+    </button>
+    <button class="tg-tab" onclick="openDrawer('restoreDrawer'); switchNav('restore', this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="12" y1="3" x2="12" y2="21"></line>
+      </svg>
+      <span>Реставрация</span>
+    </button>
+    <button class="tg-tab kiosk-hide" onclick="openDrawer('adminDrawer'); switchNav('admin', this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+      <span>Управление</span>
+    </button>
+  </nav>
+
+  <div id="locationDrawer" class="tg-sheet-overlay" onclick="if(event.target===this) closeDrawer('locationDrawer')">
+    <div class="tg-sheet">
+      <div class="tg-sheet-grabber"></div>
+      <div class="tg-sheet-header">
+        <div>
+          <div class="tg-sheet-caption" id="locCategoryBadge">Категория</div>
+          <div class="tg-sheet-title" id="locTitle">Название локации</div>
+        </div>
+        <button class="tg-close-btn" onclick="closeDrawer('locationDrawer')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="tg-sheet-content">
+        <div class="tg-section">
+          <div class="tg-cell-row" style="padding: 0 4px;">
+            <div class="tg-section-header" style="padding:0;" id="locGalleryHeader">Фотографии объекта</div>
+            <div class="tg-cell-subtitle" id="locGalleryCounter">1 / 1</div>
+          </div>
+
+          <div class="tg-gallery-single" id="locSingleWrap">
+            <img id="locSingleImg" src="" alt="Фотография объекта" />
+            <button class="tg-gallery-nav prev" onclick="stepGalleryPhoto(-1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button class="tg-gallery-nav next" onclick="stepGalleryPhoto(1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <span class="ba-badge left" id="locSingleBadge">Современный снимок</span>
+          </div>
+
+          <div class="ba-slider-wrap" id="locBaContainer" style="display:none;">
+            <img id="locPhotoAfter" src="" alt="ИИ-генерация" />
+            <div class="ba-before-layer" id="locBeforeLayer">
+              <img id="locPhotoBefore" src="" alt="Архивное фото" />
+            </div>
+            <div class="ba-handle" id="locBaHandle">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <button class="tg-gallery-nav prev" onclick="event.stopPropagation(); stepGalleryPhoto(-1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button class="tg-gallery-nav next" onclick="event.stopPropagation(); stepGalleryPhoto(1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <span class="ba-badge left">Архив (оригинал)</span>
+            <span class="ba-badge right">ИИ-реконструкция (GPU)</span>
+            <input
+              type="range"
+              min="2"
+              max="98"
+              value="50"
+              class="ba-range-input"
+              id="locBaRange"
+              oninput="updateBaSlider('locBaRange', 'locBeforeLayer', 'locBaHandle', 'locPhotoBefore', 'locBaContainer')"
+            />
+          </div>
+
+          <div class="tg-thumb-strip" id="locThumbStrip"></div>
+
+          <div class="tg-gen-progress-wrap" id="locGenProgressWrap">
+            <div class="tg-gen-progress-top">
+              <span class="tg-gen-progress-stage" id="locGenStageText">Подготовка снимка к реконструкции...</span>
+              <span class="tg-gen-progress-pct" id="locGenPctText">0%</span>
+            </div>
+            <div class="tg-gen-progress-track">
+              <div class="tg-gen-progress-fill" id="locGenFillBar"></div>
+            </div>
+            <div class="tg-gen-progress-meta">
+              <span>Конвейер: ИИ-реконструкция (GPU)</span>
+              <span id="locGenEtaText">Осталось ~10 сек</span>
+            </div>
+          </div>
+
+          <div class="tg-btn-row" style="margin-top:4px;">
+            <button class="tg-bar-btn" style="flex:1.4;" id="btnGpuLocPhoto" onclick="restoreSelectedGalleryPhoto()">
+              Реставрировать старый снимок (ИИ)
+            </button>
+            <button class="tg-bar-btn secondary" style="flex:1;" id="btnFindLocPhoto" onclick="refreshLocationPhoto()">
+              Обновить галерею
+            </button>
+          </div>
+        </div>
+
+        <div class="tg-segmented">
+          <button class="tg-segment active" onclick="switchLocTab('info', this)">Справка</button>
+          <button class="tg-segment" onclick="switchLocTab('quest', this)">Квест</button>
+          <button class="tg-segment" onclick="switchLocTab('persona', this)">Диалог</button>
+          <button class="tg-segment" onclick="switchLocTab('crowd', this)">Архив</button>
+        </div>
+
+        <div id="locTab_info" class="tg-section" style="gap:12px;">
+          <div class="tg-section-card">
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Эпоха и личности</div>
+              <div class="tg-cell-title" id="locMetaText"></div>
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Координаты</div>
+              <div class="tg-cell-title" id="locCoordsText"></div>
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Историческая справка</div>
+              <div class="tg-body-text" id="locFullHistory"></div>
+            </div>
+          </div>
+
+          <div class="tg-section">
+            <div class="tg-section-header">Ключевые факты</div>
+            <div class="tg-section-card" id="locFactsList"></div>
+          </div>
+
+          <div class="tg-btn-row">
+            <button class="tg-btn" onclick="speakLocationAudio()">Аудиогид</button>
+            <button class="tg-btn secondary" onclick="buildRouteToCurrentLocation()">Построить маршрут</button>
+          </div>
+        </div>
+
+        <div id="locTab_quest" style="display:none;">
+          <div class="tg-section">
+            <div class="tg-section-header">Контрольный вопрос на местности</div>
+            <div class="tg-section-card">
+              <div class="tg-cell">
+                <div class="tg-body-text" id="locQuestQuestion"></div>
+              </div>
+              <div class="tg-cell">
+                <input
+                  type="text"
+                  id="locQuestAnswerInput"
+                  class="tg-input"
+                  placeholder="Введите ответ..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="tg-btn-row" style="margin-top:12px;">
+            <button class="tg-btn" onclick="submitQuestAnswer()">Проверить ответ</button>
+            <button class="tg-btn secondary" onclick="toggleQuestHint()">Подсказка</button>
+          </div>
+
+          <div id="locQuestHintBox" class="tg-section-card" style="display:none;margin-top:10px;padding:12px;font-size:14px;color:var(--tg-hint);"></div>
+          <div id="locQuestResultBox" class="tg-section-card" style="display:none;margin-top:10px;padding:12px;font-size:14px;font-weight:500;"></div>
+        </div>
+
+        <div id="locTab_persona" style="display:none;">
+          <div class="tg-section">
+            <div class="tg-section-card" style="margin-bottom:10px;">
+              <div class="tg-cell">
+                <div class="tg-cell-title" id="locPersonaName">Исторический житель</div>
+                <div class="tg-cell-subtitle" id="locPersonaRole">Очевидец эпохи</div>
+              </div>
+            </div>
+
+            <div id="personaChatBox" class="tg-chat-list"></div>
+
+            <div class="tg-section-card" style="margin-top:10px;">
+              <div class="tg-cell" style="flex-direction:row;align-items:center;gap:8px;">
+                <input
+                  type="text"
+                  id="personaInput"
+                  class="tg-input"
+                  placeholder="Задайте вопрос об истории места..."
+                  onkeydown="if(event.key==='Enter') sendPersonaMessage()"
+                />
+                <button class="tg-bar-btn" onclick="sendPersonaMessage()">Отправить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="locTab_crowd" style="display:none;">
+          <div class="tg-section">
+            <div class="tg-section-header">Загрузка архивного снимка</div>
+            <div class="tg-section-card">
+              <div class="tg-cell">
+                <div class="tg-cell-subtitle">
+                  Загрузите старую фотографию этого объекта. Модель на сервере удалит повреждения и выполнит колоризацию.
+                </div>
+              </div>
+              <div class="tg-cell">
+                <input type="file" id="locCrowdFile" accept="image/*" class="tg-input" />
+              </div>
+            </div>
+            <button class="tg-btn" style="margin-top:12px;" id="btnCrowdRestore" onclick="uploadAndRestorePhoto(true)">
+              Восстановить и привязать к локации
+            </button>
+            <div class="tg-gen-progress-wrap" id="crowdGenProgressWrap">
+              <div class="tg-gen-progress-top">
+                <span class="tg-gen-progress-stage" id="crowdGenStageText">Подготовка снимка к реконструкции...</span>
+                <span class="tg-gen-progress-pct" id="crowdGenPctText">0%</span>
+              </div>
+              <div class="tg-gen-progress-track">
+                <div class="tg-gen-progress-fill" id="crowdGenFillBar"></div>
+              </div>
+              <div class="tg-gen-progress-meta">
+                <span>Конвейер: ИИ-реконструкция (GPU)</span>
+                <span id="crowdGenEtaText">Осталось ~10 сек</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="aiGuideDrawer" class="tg-sheet-overlay" onclick="if(event.target===this) closeDrawer('aiGuideDrawer')">
+    <div class="tg-sheet">
+      <div class="tg-sheet-grabber"></div>
+      <div class="tg-sheet-header">
+        <div>
+          <div class="tg-sheet-caption">Персональный маршрут</div>
+          <div class="tg-sheet-title">ИИ-Экскурсовод</div>
+        </div>
+        <button class="tg-close-btn" onclick="closeDrawer('aiGuideDrawer')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="tg-sheet-content">
+        <div class="tg-section">
+          <div class="tg-section-header">Параметры маршрута</div>
+          <div class="tg-section-card">
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Город или населённый пункт</div>
+              <div class="tg-cell-row">
+                <input type="text" id="routeCityInput" class="tg-input" value="Гомель" placeholder="Введите любой город..." />
+                <button class="tg-bar-btn secondary" onclick="useGpsForRoute()">Геолокация</button>
+              </div>
+            </div>
+
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Предпочитаемые категории мест (можно выбрать несколько)</div>
+              <div class="tg-route-cats-grid" id="routeCategoriesGrid">
+                <button type="button" class="tg-route-cat-chip active" data-rcat="all" onclick="toggleRouteCategory('all', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+                  <span>Все категории</span>
+                </button>
+                <button type="button" class="tg-route-cat-chip" data-rcat="religious" onclick="toggleRouteCategory('religious', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v5M9.5 4.5h5M7 11c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5v10H7V11z"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
+                  <span>Церковные и храмы</span>
+                </button>
+                <button type="button" class="tg-route-cat-chip" data-rcat="architecture" onclick="toggleRouteCategory('architecture', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+                  <span>Исторические и архитектура</span>
+                </button>
+                <button type="button" class="tg-route-cat-chip" data-rcat="ww2" onclick="toggleRouteCategory('ww2', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>Военные и мемориалы</span>
+                </button>
+                <button type="button" class="tg-route-cat-chip" data-rcat="lost" onclick="toggleRouteCategory('lost', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Древние и утраченные</span>
+                </button>
+                <button type="button" class="tg-route-cat-chip" data-rcat="nature" onclick="toggleRouteCategory('nature', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+                  <span>Парки и природа</span>
+                </button>
+                <button type="button" class="tg-route-cat-chip" data-rcat="archival" onclick="toggleRouteCategory('archival', this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  <span>Архивные кадры</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Дополнительные пожелания (необязательно)</div>
+              <input
+                type="text"
+                id="routePromptInput"
+                class="tg-input"
+                placeholder="Например: охватить разные районы, соборы и военные места"
+              />
+            </div>
+
+            <div class="tg-cell">
+              <div class="tg-cell-row">
+                <span class="tg-cell-title">Длительность маршрута</span>
+                <select id="routeDurationSelect" class="tg-select" style="width:auto;text-align:right;color:var(--tg-link);">
+                  <option value="30">Короткий (30 мин)</option>
+                  <option value="45">Прогулочный (45 мин)</option>
+                  <option value="60" selected>Средний (1 час)</option>
+                  <option value="90">Расширенный (1.5 часа)</option>
+                  <option value="120">Большой (2 часа)</option>
+                  <option value="180">Обзорный (3 часа · максимум мест)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="tg-cell">
+              <div class="tg-cell-row">
+                <span class="tg-cell-title">Способ передвижения</span>
+                <select id="routeTransportSelect" class="tg-select" style="width:auto;text-align:right;color:var(--tg-link);">
+                  <option value="walk" selected>Пешком</option>
+                  <option value="bike">Велосипед</option>
+                  <option value="car">Автомобиль</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="tg-btn" id="btnBuildAiRoute" onclick="generateAiRoute()">
+          Сформировать маршрут
+        </button>
+
+        <div id="aiRouteResultCard" class="tg-section" style="display:none;gap:10px;">
+          <div class="tg-section-header" id="resRouteHeader">Сформированный маршрут</div>
+          <div class="tg-section-card">
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle" id="resRouteStats"></div>
+              <div class="tg-body-text" id="resRouteNarrative"></div>
+            </div>
+          </div>
+
+          <div class="tg-section-card" id="resRouteStopsList"></div>
+
+          <div class="tg-btn-row">
+            <button class="tg-btn" onclick="downloadCurrentRoutePDF()">Скачать PDF с QR-кодами</button>
+            <button class="tg-btn secondary" onclick="closeDrawer('aiGuideDrawer')">Показать на карте</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="restoreDrawer" class="tg-sheet-overlay" onclick="if(event.target===this) closeDrawer('restoreDrawer')">
+    <div class="tg-sheet">
+      <div class="tg-sheet-grabber"></div>
+      <div class="tg-sheet-header">
+        <div>
+          <div class="tg-sheet-caption">Поиск и нейро-обработка архивных снимков</div>
+          <div class="tg-sheet-title">Окно в прошлое</div>
+        </div>
+        <button class="tg-close-btn" onclick="closeDrawer('restoreDrawer')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="tg-sheet-content">
+        <div class="tg-section">
+          <div class="tg-section-header">Объект и поиск фотографии</div>
+          <div class="tg-section-card">
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Привязка к объекту на карте</div>
+              <select id="studioLocationSelect" class="tg-select"></select>
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Поисковый запрос или название объекта</div>
+              <input type="text" id="studioPhotoTitle" class="tg-input" placeholder="Оставьте пустым для поиска по выбранному объекту..." />
+            </div>
+          </div>
+        </div>
+
+        <button class="tg-btn" id="btnSearchAndRestore" onclick="searchAndRestoreInStudio()">
+          Найти фото в сети и отреставрировать (GPU)
+        </button>
+
+        <div class="tg-section">
+          <div class="tg-section-header">Или загрузите свой файл с устройства</div>
+          <div class="tg-section-card">
+            <div class="tg-cell">
+              <input type="file" id="studioFileInput" accept="image/*" class="tg-input" />
+            </div>
+          </div>
+        </div>
+
+        <button class="tg-btn secondary" id="btnRunStudioRestore" onclick="uploadAndRestorePhoto(false)">
+          Восстановить загруженный файл
+        </button>
+
+        <div class="tg-gen-progress-wrap" id="studioGenProgressWrap">
+          <div class="tg-gen-progress-top">
+            <span class="tg-gen-progress-stage" id="studioGenStageText">Подготовка снимка к реконструкции...</span>
+            <span class="tg-gen-progress-pct" id="studioGenPctText">0%</span>
+          </div>
+          <div class="tg-gen-progress-track">
+            <div class="tg-gen-progress-fill" id="studioGenFillBar"></div>
+          </div>
+          <div class="tg-gen-progress-meta">
+            <span>Конвейер: ИИ-реконструкция (GPU)</span>
+            <span id="studioGenEtaText">Осталось ~12 сек</span>
+          </div>
+        </div>
+
+        <div id="studioResultBox" class="tg-section" style="display:none;gap:8px;">
+          <div class="tg-section-header" id="studioPipelineMeta">Результат обработки</div>
+          <div class="ba-slider-wrap" id="studioBaContainer">
+            <img id="studioAfterImg" src="" alt="После" />
+            <div class="ba-before-layer" id="studioBeforeLayer">
+              <img id="studioBeforeImg" src="" alt="До" />
+            </div>
+            <div class="ba-handle" id="studioBaHandle">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="ba-badge left">Исходник</span>
+            <span class="ba-badge right">Результат</span>
+            <input
+              type="range"
+              min="2"
+              max="98"
+              value="50"
+              class="ba-range-input"
+              id="studioBaRange"
+              oninput="updateBaSlider('studioBaRange', 'studioBeforeLayer', 'studioBaHandle', 'studioBeforeImg', 'studioBaContainer')"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminDrawer" class="tg-sheet-overlay" onclick="if(event.target===this) closeDrawer('adminDrawer')">
+    <div class="tg-sheet">
+      <div class="tg-sheet-grabber"></div>
+      <div class="tg-sheet-header">
+        <div>
+          <div class="tg-sheet-caption">Конструктор исторического контента</div>
+          <div class="tg-sheet-title">Панель управления</div>
+        </div>
+        <button class="tg-close-btn" onclick="closeDrawer('adminDrawer')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="tg-sheet-content">
+        <div class="tg-section">
+          <div class="tg-section-header">Добавление локации</div>
+          <div class="tg-section-card">
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Название объекта</div>
+              <input type="text" id="admTitle" class="tg-input" placeholder="Например: Часовня-усыпальница Паскевичей" />
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Населённый пункт</div>
+              <input type="text" id="admCity" class="tg-input" value="Гомель" />
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-row">
+                <span class="tg-cell-title">Категория</span>
+                <select id="admCategory" class="tg-select" style="width:auto;text-align:right;color:var(--tg-link);">
+                  <option value="religious">Церковные и храмы</option>
+                  <option value="architecture" selected>Исторические и архитектура</option>
+                  <option value="ww2">Военные и мемориалы ВОВ</option>
+                  <option value="lost">Древние и утраченные</option>
+                  <option value="nature">Парки и природа</option>
+                  <option value="archival">Архивное фото</option>
+                </select>
+              </div>
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Эпоха</div>
+              <input type="text" id="admEpoch" class="tg-input" placeholder="XIX век" />
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Историческая личность</div>
+              <input type="text" id="admPerson" class="tg-input" placeholder="И. Ф. Паскевич" />
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Координаты (широта и долгота)</div>
+              <div class="tg-cell-row">
+                <input type="number" step="0.0001" id="admLat" class="tg-input" value="52.4235" />
+                <input type="number" step="0.0001" id="admLon" class="tg-input" value="31.0172" />
+                <button class="tg-bar-btn secondary" onclick="pickCoordsOnMap()">На карте</button>
+              </div>
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Историческая справка</div>
+              <textarea id="admDesc" rows="3" class="tg-textarea" placeholder="Описание объекта и факты..."></textarea>
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Вопрос для квеста</div>
+              <input type="text" id="admQuestQ" class="tg-input" placeholder="Какой год указан на фасаде?" />
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Ответ на вопрос</div>
+              <input type="text" id="admQuestA" class="tg-input" placeholder="1889" />
+            </div>
+            <div class="tg-cell">
+              <div class="tg-cell-subtitle">Персонаж для исторического диалога</div>
+              <input type="text" id="admPersona" class="tg-input" placeholder="Архитектор Николай Иванович" />
+            </div>
+          </div>
+        </div>
+
+        <button class="tg-btn" onclick="saveNewLocationFromAdmin()">
+          Сохранить локацию
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    let currentUser = { id: "demo_user", name: "Пользователь" };
+
+    function applyTelegramTheme() {
+      if (!tg) return;
+      if (tg.colorScheme === "dark") {
+        document.body.classList.add("tg-dark");
+      } else {
+        document.body.classList.remove("tg-dark");
+      }
+    }
+
+    const _origFetch = window.fetch.bind(window);
+    window._activeOrigin = "";
+
+    async function _discoverLiveOrigin() {
+      try {
+        const rLocal = await _origFetch("http://127.0.0.1:8000/api/health", { mode: "cors" });
+        if (rLocal && rLocal.ok) {
+          window._activeOrigin = "http://127.0.0.1:8000";
+          return window._activeOrigin;
+        }
+      } catch (e) {}
+      try {
+        const rBot = await _origFetch("https://api.telegram.org/bot8948270590:AAGz-m-qpKn6oPRNy7MxKEqJCOTdDzI-K0k/getChatMenuButton");
+        const jBot = await rBot.json();
+        const webUrl = jBot && jBot.result && jBot.result.web_app && jBot.result.web_app.url;
+        if (webUrl) {
+          const u = new URL(webUrl);
+          window._activeOrigin = u.origin;
+          return window._activeOrigin;
+        }
+      } catch (e) {}
+      return "";
+    }
+
+    function _resolveUrl(u) {
+      if (!u || typeof u !== "string") return u;
+      if (u.startsWith("/") && window._activeOrigin) {
+        return window._activeOrigin + u;
+      }
+      return u;
+    }
+
+    window.fetch = async function(input, init) {
+      const isRelApi = typeof input === "string" && input.startsWith("/api/");
+      if (!isRelApi) {
+        return _origFetch(input, init);
+      }
+      const targetUrl = window._activeOrigin ? (window._activeOrigin + input) : input;
+      try {
+        const res = await _origFetch(targetUrl, init);
+        const ct = (res.headers && res.headers.get("content-type")) || "";
+        if (res.status !== 502 && res.status !== 503 && res.status !== 504 && !ct.includes("text/plain")) {
+          return res;
+        }
+      } catch (err) {}
+      const newOrigin = await _discoverLiveOrigin();
+      if (newOrigin) {
+        return _origFetch(newOrigin + input, init);
+      }
+      return _origFetch(input, init);
+    };
+
+    window.addEventListener("error", async (e) => {
+      const t = e.target;
+      if (t && t.tagName === "IMG" && t.src && t.src.includes("/static/") && !t.dataset.retriedOrigin) {
+        t.dataset.retriedOrigin = "1";
+        const newOrigin = window._activeOrigin || (await _discoverLiveOrigin());
+        if (newOrigin) {
+          try {
+            const u = new URL(t.src);
+            t.src = newOrigin + u.pathname + u.search;
+          } catch (_) {}
+        }
+      }
+    }, true);
+
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      applyTelegramTheme();
+      tg.onEvent("themeChanged", applyTelegramTheme);
+
+      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        currentUser.id = String(tg.initDataUnsafe.user.id);
+        currentUser.name = tg.initDataUnsafe.user.first_name || "Пользователь";
+      }
+
+      if (tg.BackButton) {
+        tg.BackButton.onClick(() => {
+          document.querySelectorAll(".tg-sheet-overlay").forEach(d => d.classList.remove("open"));
+          tg.BackButton.hide();
+        });
+      }
+    }
+
+    let map;
+    let tileLayer;
+    let markersLayer;
+    let routeLineLayer;
+    let allLocations = [];
+    let activeCity = "Гомель";
+    let currentCategory = "all";
+    let selectedLocation = null;
+    let activeRouteData = null;
+    let personaHistories = {};
+    let pickingAdminCoords = false;
+    let userGpsCoords = null;
+
+    function setActiveCity(cityName) {
+      activeCity = (cityName || "Гомель").trim();
+      const lbl = document.getElementById("currentCityLabel");
+      if (lbl) lbl.textContent = activeCity;
+      const routeInput = document.getElementById("routeCityInput");
+      if (routeInput) routeInput.value = activeCity;
+      const admCityInput = document.getElementById("admCity");
+      if (admCityInput) admCityInput.value = activeCity;
+    }
+
+    let selectedRouteCategories = ["all"];
+
+    const categoryMeta = {
+      religious: {
+        label: "Церковные и храмы",
+        cls: "cat-religious",
+        svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v5M9.5 4.5h5M7 11c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5v10H7V11z"/><line x1="4" y1="21" x2="20" y2="21"/></svg>'
+      },
+      architecture: {
+        label: "Исторические и архитектура",
+        cls: "cat-architecture",
+        svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>'
+      },
+      ww2: {
+        label: "Военные и мемориалы",
+        cls: "cat-ww2",
+        svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      },
+      lost: {
+        label: "Древние и утраченные",
+        cls: "cat-lost",
+        svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+      },
+      nature: {
+        label: "Парки и природа",
+        cls: "cat-nature",
+        svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>'
+      },
+      archival: {
+        label: "Архивное фото",
+        cls: "cat-archival",
+        svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+      }
+    };
+
+    function haptic(type = "light") {
+      try {
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
+      } catch (e) {}
+    }
+
+    function showToast(msg, duration = 2800) {
+      const el = document.getElementById("snackbar");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add("visible");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { el.classList.remove("visible"); }, duration);
+    }
+
+    function initMap() {
+      map = L.map("map", { zoomControl: false }).setView([52.4230, 31.0120], 14);
+      if (map.attributionControl) {
+        map.attributionControl.setPrefix(false);
+      }
+
+      const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+      tileLayer = L.tileLayer(tileUrl, {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap"
+      }).addTo(map);
+
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+      markersLayer = L.layerGroup().addTo(map);
+      routeLineLayer = L.layerGroup().addTo(map);
+
+      map.on("click", (e) => {
+        if (pickingAdminCoords) {
+          pickingAdminCoords = false;
+          document.getElementById("admLat").value = e.latlng.lat.toFixed(5);
+          document.getElementById("admLon").value = e.latlng.lng.toFixed(5);
+          openDrawer("adminDrawer");
+          showToast("Координаты выбраны");
+        }
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("mode") === "kiosk") {
+        document.body.classList.add("kiosk-mode");
+      }
+
+      setActiveCity("Гомель");
+      loadLocations("Гомель", "", true);
+      loadUserProgress();
+    }
+
+    async function loadLocations(cityFilter = "", searchFilter = "", fitMap = true) {
+      try {
+        const q = new URLSearchParams();
+        if (currentCategory && currentCategory !== "all") q.set("category", currentCategory);
+        const targetCity = cityFilter || activeCity || "Гомель";
+        if (!searchFilter) {
+          q.set("city", targetCity);
+        } else {
+          q.set("search", searchFilter);
+        }
+
+        const res = await fetch(`/api/locations?${q.toString()}`);
+        const data = await res.json();
+        allLocations = data.locations || [];
+        renderMarkers(allLocations, fitMap);
+        populateLocationSelect(allLocations);
+        _warmCityPhotoCache(allLocations);
+      } catch (e) {
+        console.error("Failed to load locations", e);
+      }
+    }
+
+    function renderMarkers(locations, fitMap = true) {
+      markersLayer.clearLayers();
+      if (!locations.length) return;
+
+      const bounds = [];
+      locations.forEach((loc, idx) => {
+        const meta = categoryMeta[loc.category] || categoryMeta.architecture;
+        const delayMs = Math.min(idx * 24, 320);
+        const isSel = selectedLocation && selectedLocation.id === loc.id;
+        const iconHtml = `<div class="tg-marker ${meta.cls}${isSel ? ' selected' : ''}" data-loc-id="${loc.id}" style="animation-delay:${delayMs}ms">${meta.svg}</div>`;
+        const customIcon = L.divIcon({
+          html: iconHtml,
+          className: "",
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const marker = L.marker([loc.lat, loc.lon], { icon: customIcon });
+        marker.on("click", () => {
+          document.querySelectorAll(".tg-marker.selected").forEach(el => el.classList.remove("selected"));
+          const markerEl = marker.getElement() ? marker.getElement().querySelector(".tg-marker") : null;
+          if (markerEl) markerEl.classList.add("selected");
+          if (map) {
+            map.panTo([loc.lat, loc.lon], { animate: true, duration: 0.42 });
+          }
+          openLocationModal(loc);
+        });
+        markersLayer.addLayer(marker);
+        bounds.push([loc.lat, loc.lon]);
+      });
+
+      if (fitMap && bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15, animate: true, duration: 0.55 });
+      }
+    }
+
+    function setCategory(cat, btn) {
+      haptic("light");
+      currentCategory = cat;
+      document.querySelectorAll(".tg-folder-tab").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      loadLocations(activeCity, "", true);
+    }
+
+    let _cityExploreTimer = null;
+
+    function startCityExploreProgress(cityLabel) {
+      const overlay = document.getElementById("cityExploreOverlay");
+      const titleEl = document.getElementById("cityExploreTitle");
+      const pctEl = document.getElementById("cityExplorePct");
+      const stageEl = document.getElementById("cityExploreStage");
+      const fillEl = document.getElementById("cityExploreFillBar");
+      const chipYm = document.getElementById("srcChipYandex");
+      const chipWk = document.getElementById("srcChipWiki");
+      const chipPv = document.getElementById("srcChipPastvu");
+      const chipCm = document.getElementById("srcChipCommons");
+      if (!overlay) return;
+
+      if (_cityExploreTimer) {
+        clearInterval(_cityExploreTimer);
+        _cityExploreTimer = null;
+      }
+
+      titleEl.textContent = `Подбор объектов: ${cityLabel}`;
+      pctEl.textContent = "5%";
+      fillEl.style.width = "5%";
+      stageEl.textContent = "Геокодирование центра города (Беларусь) и анализ карты...";
+      if (chipYm) chipYm.classList.add("active");
+      if (chipWk) chipWk.classList.remove("active");
+      if (chipPv) chipPv.classList.remove("active");
+      if (chipCm) chipCm.classList.remove("active");
+      overlay.classList.add("visible");
+
+      const startTs = performance.now();
+      _cityExploreTimer = setInterval(() => {
+        const elapsed = (performance.now() - startTs) / 1000.0;
+        const pct = Math.min(92, Math.max(8, Math.round(94 * (1 - Math.exp(-elapsed / 1.8)))));
+        fillEl.style.width = pct + "%";
+        pctEl.textContent = pct + "%";
+        if (pct < 30) {
+          stageEl.textContent = "Пакетный опрос Яндекс Карт, Википедии и PastVu...";
+        } else if (pct < 62) {
+          if (chipWk) chipWk.classList.add("active");
+          stageEl.textContent = "Векторная сверка объектов, описаний и архивных кадров...";
+        } else if (pct < 84) {
+          if (chipPv) chipPv.classList.add("active");
+          stageEl.textContent = "Загрузка WebP-галерей и проверка качества снимков...";
+        } else {
+          if (chipCm) chipCm.classList.add("active");
+          stageEl.textContent = "Сохранение векторов в SQLite и расстановка меток...";
+        }
+      }, 110);
+    }
+
+    async function finishCityExploreProgress(ok, resolvedCity, count) {
+      const overlay = document.getElementById("cityExploreOverlay");
+      const titleEl = document.getElementById("cityExploreTitle");
+      const pctEl = document.getElementById("cityExplorePct");
+      const stageEl = document.getElementById("cityExploreStage");
+      const fillEl = document.getElementById("cityExploreFillBar");
+      const chipWk = document.getElementById("srcChipWiki");
+      const chipPv = document.getElementById("srcChipPastvu");
+      const chipCm = document.getElementById("srcChipCommons");
+
+      if (_cityExploreTimer) {
+        clearInterval(_cityExploreTimer);
+        _cityExploreTimer = null;
+      }
+      if (!overlay) return;
+
+      if (ok) {
+        if (chipWk) chipWk.classList.add("active");
+        if (chipPv) chipPv.classList.add("active");
+        if (chipCm) chipCm.classList.add("active");
+        fillEl.style.width = "100%";
+        pctEl.textContent = "100%";
+        titleEl.textContent = `Карта готова: ${resolvedCity}`;
+        stageEl.textContent = `Проверено и добавлено объектов на карту: ${count}`;
+        await new Promise(r => setTimeout(r, 320));
+      } else {
+        stageEl.textContent = "Не удалось загрузить объекты";
+        await new Promise(r => setTimeout(r, 500));
+      }
+      overlay.classList.remove("visible");
+    }
+
+    let _isExploringCity = false;
+
+    async function handleSearchOrExplore() {
+      if (_isExploringCity) return;
+      const query = document.getElementById("searchInput").value.trim();
+      if (!query) {
+        loadLocations(activeCity, "", true);
+        return;
+      }
+      haptic("light");
+      const qLow = query.toLowerCase();
+
+      try {
+        const res = await fetch(`/api/locations?search=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        const found = data.locations || [];
+
+        const resolvedCityName = data.resolved_city || (found.find(l => (l.city || "").toLowerCase() === qLow) || {}).city;
+        if (resolvedCityName && found.length >= 6) {
+          allLocations = found;
+          setActiveCity(resolvedCityName);
+          renderMarkers(allLocations, true);
+          populateLocationSelect(allLocations);
+          _warmCityPhotoCache(allLocations);
+          showToast(`${resolvedCityName}: объектов — ${allLocations.length}`);
+          return;
+        }
+
+        if ((data.is_vector_match || found.length > 0) && !resolvedCityName) {
+          const inActiveCity = found.filter(l => (l.city || "").toLowerCase() === (activeCity || "").toLowerCase());
+          const targetList = inActiveCity.length > 0 ? inActiveCity : found;
+          const targetLoc = targetList[0];
+          const matchedCity = targetLoc.city;
+
+          const cityRes = await fetch(`/api/locations?city=${encodeURIComponent(matchedCity)}`);
+          const cityData = await cityRes.json();
+          allLocations = (cityData.locations && cityData.locations.length) ? cityData.locations : targetList;
+          setActiveCity(matchedCity);
+          renderMarkers(targetList.length > 1 ? targetList : allLocations, true);
+          populateLocationSelect(allLocations);
+          _warmCityPhotoCache(allLocations);
+          if (targetList.length === 1 || (targetList.length <= 3 && !qLow.includes(" "))) {
+            openLocationModal(targetLoc);
+          } else {
+            showToast(`Найдено по смыслу: ${targetList.length} объект(ов)`);
+          }
+          return;
+        }
+
+        _isExploringCity = true;
+        startCityExploreProgress(query);
+        const expRes = await fetch("/api/explore_place", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ place_name: query })
+        });
+        const expData = await expRes.json();
+        if (expData.locations && expData.locations.length > 0) {
+          const resolvedCity = expData.city || query;
+          allLocations = expData.locations.filter(l => (l.city || resolvedCity).toLowerCase() === resolvedCity.toLowerCase());
+          if (!allLocations.length) allLocations = expData.locations;
+          await finishCityExploreProgress(true, resolvedCity, allLocations.length);
+          currentCategory = "all";
+          document.querySelectorAll(".tg-folder-tab").forEach(c => c.classList.remove("active"));
+          document.querySelector('.tg-folder-tab[data-cat="all"]').classList.add("active");
+          setActiveCity(resolvedCity);
+          renderMarkers(allLocations, true);
+          populateLocationSelect(allLocations);
+          _warmCityPhotoCache(allLocations);
+          showToast(`Открыт город ${resolvedCity} (${allLocations.length} объектов)`);
+          setTimeout(async () => {
+            try {
+              const rSync = await fetch(`/api/locations?city=${encodeURIComponent(resolvedCity)}`);
+              const dSync = await rSync.json();
+              if (dSync.locations && dSync.locations.length && activeCity.toLowerCase() === resolvedCity.toLowerCase()) {
+                allLocations = dSync.locations;
+                _warmCityPhotoCache(allLocations);
+              }
+            } catch (_) {}
+          }, 4200);
+        } else {
+          await finishCityExploreProgress(false, query, 0);
+          showToast("Объекты не найдены");
+        }
+      } catch (e) {
+        await finishCityExploreProgress(false, query, 0);
+        showToast("Не удалось выполнить запрос");
+      } finally {
+        _isExploringCity = false;
+      }
+    }
+
+    function locateUserGPS() {
+      if (!navigator.geolocation) {
+        showToast("Геолокация не поддерживается");
+        return;
+      }
+      showToast("Определение координат...");
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          userGpsCoords = { lat, lon };
+          map.setView([lat, lon], 14);
+          L.circleMarker([lat, lon], {
+            radius: 7,
+            fillColor: "#007aff",
+            color: "#ffffff",
+            weight: 2,
+            fillOpacity: 1
+          }).addTo(map).bindPopup("Ваше местоположение");
+
+          startCityExploreProgress("Ваша геолокация");
+          try {
+            const expRes = await fetch("/api/explore_place", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ place_name: "", lat, lon })
+            });
+            const expData = await expRes.json();
+            if (expData.locations) {
+              allLocations = expData.locations;
+              await finishCityExploreProgress(true, expData.city, allLocations.length);
+              setActiveCity(expData.city);
+              renderMarkers(allLocations, true);
+              populateLocationSelect(allLocations);
+              _warmCityPhotoCache(allLocations);
+              showToast(`Локация: ${expData.city}`);
+            } else {
+              await finishCityExploreProgress(false, "", 0);
+            }
+          } catch (err) {
+            await finishCityExploreProgress(false, "", 0);
+          }
+        },
+        () => {
+          showToast("Доступ к геолокации отклонён");
+          map.setView([52.4230, 31.0120], 14);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    let currentGalleryPhotos = [];
+    let currentPhotoIndex = 0;
+    const _decodedImageCache = new Map();
+    const _containerWidthCache = {};
+    let _baRafPending = false;
+
+    function _preloadAndDecodeUrl(rawUrl, highPriority = false) {
+      const url = _resolveUrl(rawUrl);
+      if (!url) return Promise.resolve(null);
+      if (_decodedImageCache.has(url)) {
+        return Promise.resolve(_decodedImageCache.get(url));
+      }
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.decoding = "async";
+        if (highPriority && "fetchPriority" in img) {
+          img.fetchPriority = "high";
+        }
+        img.onload = () => {
+          if (img.decode) {
+            img.decode().catch(() => {}).finally(() => {
+              _decodedImageCache.set(url, img);
+              resolve(img);
+            });
+          } else {
+            _decodedImageCache.set(url, img);
+            resolve(img);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    function _preloadAllGalleryPhotos(photos) {
+      if (!Array.isArray(photos) || !photos.length) return;
+      const first = photos[0];
+      if (first && first.url) _preloadAndDecodeUrl(first.url, true);
+      if (first && first.restored_url) _preloadAndDecodeUrl(first.restored_url, true);
+      photos.slice(0, 6).forEach((p) => {
+        _preloadAndDecodeUrl(_getThumbUrl(p), false);
+      });
+    }
+
+    function _warmCityPhotoCache(locations) {
+    }
+
+    function openLocationModal(loc) {
+      haptic("light");
+      selectedLocation = loc;
+      document.querySelectorAll(".tg-marker").forEach(el => {
+        el.classList.toggle("selected", String(el.getAttribute("data-loc-id")) === String(loc.id));
+      });
+      const meta = categoryMeta[loc.category] || categoryMeta.architecture;
+      document.getElementById("locCategoryBadge").textContent = `${meta.label} · ${loc.city}`;
+      document.getElementById("locTitle").textContent = loc.title;
+
+      if (loc.photos && Array.isArray(loc.photos) && loc.photos.length > 0) {
+        currentGalleryPhotos = loc.photos;
+      } else {
+        currentGalleryPhotos = [
+          {
+            url: loc.photo_after_url || "/static/demo/palace_after.webp",
+            thumb_url: "/static/demo/palace_after_thumb.webp",
+            restored_url: null,
+            is_archival: false,
+            caption: "Современный снимок"
+          }
+        ];
+      }
+      currentPhotoIndex = 0;
+      _preloadAllGalleryPhotos(currentGalleryPhotos);
+      renderLocationGallery(true);
+
+      const metaParts = [loc.epoch];
+      if (loc.historical_person) metaParts.push(loc.historical_person);
+      document.getElementById("locMetaText").textContent = metaParts.join(" · ");
+      document.getElementById("locCoordsText").textContent = `${Number(loc.lat).toFixed(4)}, ${Number(loc.lon).toFixed(4)}`;
+      document.getElementById("locFullHistory").textContent = loc.full_history || loc.short_description;
+
+      const facts = loc.facts && loc.facts.length ? loc.facts : [loc.short_description];
+      document.getElementById("locFactsList").innerHTML = facts
+        .map(f => `<div class="tg-cell"><div class="tg-body-text">${f}</div></div>`)
+        .join("");
+
+      document.getElementById("locQuestQuestion").textContent =
+        loc.quest_question || "В каком веке был создан этот исторический объект?";
+      document.getElementById("locQuestAnswerInput").value = "";
+      document.getElementById("locQuestHintBox").style.display = "none";
+      document.getElementById("locQuestResultBox").style.display = "none";
+
+      document.getElementById("locPersonaName").textContent = loc.persona_name || "Хранитель истории";
+      document.getElementById("locPersonaRole").textContent =
+        `${loc.persona_role || "Очевидец эпохи"} · ${loc.persona_epoch || loc.epoch}`;
+      renderPersonaChat(loc.id);
+
+      switchLocTab("info", document.querySelector("#locationDrawer .tg-segment"));
+      openDrawer("locationDrawer");
+
+      if (currentGalleryPhotos.length === 0 || (currentGalleryPhotos.length < 2 && loc.category !== "archival")) {
+        refreshLocationPhoto();
+      }
+    }
+
+    function _getThumbUrl(p) {
+      if (p.restored_thumb_url) return _resolveUrl(p.restored_thumb_url);
+      if (p.restored_url) {
+        const ru = p.restored_url.split("?")[0];
+        if (ru.endsWith(".webp") && !ru.endsWith("_thumb.webp")) {
+          return _resolveUrl(ru.slice(0, -5) + "_thumb.webp");
+        }
+        return _resolveUrl(p.restored_url);
+      }
+      if (p.thumb_url) return _resolveUrl(p.thumb_url);
+      const u = (p.url || "").split("?")[0];
+      if (u.endsWith(".webp") && !u.endsWith("_thumb.webp")) {
+        return _resolveUrl(u.slice(0, -5) + "_thumb.webp");
+      }
+      return _resolveUrl(p.url);
+    }
+
+    function _preloadNeighborPhotos() {
+      const total = currentGalleryPhotos.length;
+      if (total <= 1) return;
+      const nextIdx = (currentPhotoIndex + 1) % total;
+      const prevIdx = (currentPhotoIndex - 1 + total) % total;
+      [nextIdx, prevIdx].forEach((idx) => {
+        const item = currentGalleryPhotos[idx];
+        if (item) {
+          if (item.url) _preloadAndDecodeUrl(item.url, true);
+          if (item.restored_url) _preloadAndDecodeUrl(item.restored_url, true);
+        }
+      });
+    }
+
+    function renderLocationGallery(forceRebuildStrip = false) {
+      const total = currentGalleryPhotos.length;
+      if (!total) return;
+      if (currentPhotoIndex >= total) currentPhotoIndex = 0;
+      if (currentPhotoIndex < 0) currentPhotoIndex = total - 1;
+
+      const activeIdx = currentPhotoIndex;
+      const item = currentGalleryPhotos[activeIdx];
+      document.getElementById("locGalleryCounter").textContent = `${activeIdx + 1} / ${total}`;
+
+      const singleWrap = document.getElementById("locSingleWrap");
+      const baWrap = document.getElementById("locBaContainer");
+      const btnGpu = document.getElementById("btnGpuLocPhoto");
+
+      const strip = document.getElementById("locThumbStrip");
+      const existingThumbs = strip.querySelectorAll(".tg-thumb-item");
+      if (forceRebuildStrip || existingThumbs.length !== total) {
+        strip.innerHTML = currentGalleryPhotos.map((p, idx) => {
+          const thumbSrc = _getThumbUrl(p);
+          const fallbackSrc = _resolveUrl(p.restored_url || p.url);
+          const tagHtml = p.restored_url
+            ? `<span class="tg-thumb-tag" style="background:var(--tg-button);">ИИ</span>`
+            : (p.is_archival ? `<span class="tg-thumb-tag">Архив</span>` : "");
+          return `
+            <div class="tg-thumb-item ${idx === activeIdx ? 'active' : ''}" onclick="selectGalleryPhoto(${idx})">
+              <img src="${thumbSrc}" decoding="async" fetchpriority="high" onerror="if(this.src!=='${fallbackSrc}')this.src='${fallbackSrc}'" alt="Фото ${idx + 1}" />
+              ${tagHtml}
+            </div>
+          `;
+        }).join("");
+      } else {
+        existingThumbs.forEach((el, idx) => {
+          const isAct = idx === activeIdx;
+          el.classList.toggle("active", isAct);
+          if (isAct && el.scrollIntoView) {
+            el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+          }
+        });
+      }
+
+      if (item.restored_url) {
+        singleWrap.style.display = "none";
+        baWrap.style.display = "block";
+        const beforeImg = document.getElementById("locPhotoBefore");
+        const afterImg = document.getElementById("locPhotoAfter");
+        const origFull = _resolveUrl(item.url);
+        const restFull = _resolveUrl(item.restored_url);
+        beforeImg.decoding = "async";
+        afterImg.decoding = "async";
+        beforeImg.src = origFull;
+        afterImg.src = restFull;
+        document.getElementById("locBaRange").value = 50;
+        _containerWidthCache["locBaContainer"] = baWrap.offsetWidth || 340;
+        updateBaSlider("locBaRange", "locBeforeLayer", "locBaHandle", "locPhotoBefore", "locBaContainer");
+        beforeImg.onload = () => {
+          _containerWidthCache["locBaContainer"] = baWrap.offsetWidth || 340;
+          updateBaSlider("locBaRange", "locBeforeLayer", "locBaHandle", "locPhotoBefore", "locBaContainer");
+        };
+        _preloadNeighborPhotos();
+        if (btnGpu) {
+          btnGpu.style.display = "";
+          btnGpu.textContent = "Перегенерировать (ИИ)";
+        }
+      } else {
+        baWrap.style.display = "none";
+        singleWrap.style.display = "block";
+        const singleImg = document.getElementById("locSingleImg");
+        const fullSrc = _resolveUrl(item.url);
+        const thumbSrc = _getThumbUrl(item);
+
+        if (_decodedImageCache.has(fullSrc)) {
+          singleImg.src = fullSrc;
+        } else {
+          if (thumbSrc && singleImg.src !== fullSrc) {
+            singleImg.src = thumbSrc;
+          }
+          _preloadAndDecodeUrl(fullSrc, true).then((decoded) => {
+            if (decoded && currentPhotoIndex === activeIdx && !currentGalleryPhotos[activeIdx].restored_url) {
+              singleImg.src = fullSrc;
+            }
+          });
+        }
+        _preloadNeighborPhotos();
+
+        const badge = document.getElementById("locSingleBadge");
+        if (item.is_archival) {
+          badge.textContent = item.caption || "Архивный снимок (доступна ИИ-реставрация)";
+          if (btnGpu) {
+            btnGpu.style.display = "";
+            btnGpu.textContent = "Реставрировать это фото (ИИ)";
+          }
+        } else {
+          badge.textContent = item.caption || `Фотография объекта (${activeIdx + 1} из ${total})`;
+          const hasArchival = currentGalleryPhotos.some(p => p.is_archival);
+          if (btnGpu) {
+            if (hasArchival) {
+              btnGpu.style.display = "";
+              btnGpu.textContent = "К архивному фото и ИИ-реставрации";
+            } else {
+              btnGpu.style.display = "none";
+            }
+          }
+        }
+      }
+    }
+
+    function selectGalleryPhoto(idx) {
+      if (idx === currentPhotoIndex) return;
+      haptic("light");
+      currentPhotoIndex = idx;
+      renderLocationGallery(false);
+    }
+
+    function stepGalleryPhoto(delta) {
+      haptic("light");
+      currentPhotoIndex += delta;
+      renderLocationGallery(false);
+    }
+
+    (function initGallerySwipe() {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      document.addEventListener("DOMContentLoaded", () => {
+        const wrap = document.getElementById("locSingleWrap");
+        if (!wrap) return;
+        wrap.addEventListener("touchstart", (e) => {
+          if (!e.touches || !e.touches.length) return;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        wrap.addEventListener("touchend", (e) => {
+          if (!e.changedTouches || !e.changedTouches.length) return;
+          const dx = e.changedTouches[0].clientX - touchStartX;
+          const dy = e.changedTouches[0].clientY - touchStartY;
+          if (Math.abs(dx) > 32 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+            stepGalleryPhoto(dx < 0 ? 1 : -1);
+          }
+        }, { passive: true });
+      });
+    })();
+
+    function updateBaSlider(rangeId, beforeLayerId, handleId, beforeImgId, containerId) {
+      const rangeEl = document.getElementById(rangeId);
+      if (!rangeEl) return;
+      const val = rangeEl.value;
+      const beforeLayer = document.getElementById(beforeLayerId);
+      const handle = document.getElementById(handleId);
+      const beforeImg = document.getElementById(beforeImgId);
+      const container = document.getElementById(containerId);
+
+      if (beforeLayer) beforeLayer.style.width = val + "%";
+      if (handle) handle.style.left = val + "%";
+      if (container && beforeImg) {
+        const w = _containerWidthCache[containerId] || container.offsetWidth;
+        if (w > 0) {
+          _containerWidthCache[containerId] = w;
+          beforeImg.style.width = w + "px";
+        }
+      }
+    }
+
+    window.addEventListener("resize", () => {
+      delete _containerWidthCache["locBaContainer"];
+      delete _containerWidthCache["studioBaContainer"];
+      updateBaSlider("locBaRange", "locBeforeLayer", "locBaHandle", "locPhotoBefore", "locBaContainer");
+      updateBaSlider("studioBaRange", "studioBeforeLayer", "studioBaHandle", "studioBeforeImg", "studioBaContainer");
+    });
+
+    function switchLocTab(tabName, btn) {
+      ["info", "quest", "persona", "crowd"].forEach(t => {
+        const el = document.getElementById("locTab_" + t);
+        if (!el) return;
+        if (t === tabName) {
+          el.style.display = "flex";
+          el.style.flexDirection = "column";
+          el.classList.remove("tg-tab-pane-anim");
+          void el.offsetWidth;
+          el.classList.add("tg-tab-pane-anim");
+        } else {
+          el.style.display = "none";
+          el.classList.remove("tg-tab-pane-anim");
+        }
+      });
+      document.querySelectorAll("#locationDrawer .tg-segment").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+
+    function speakLocationAudio() {
+      if (!selectedLocation) return;
+      if (!("speechSynthesis" in window)) {
+        showToast("Синтез речи не поддерживается браузером");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const text = selectedLocation.audio_script || selectedLocation.short_description;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ru-RU";
+      utter.rate = 1.0;
+      window.speechSynthesis.speak(utter);
+      showToast("Воспроизведение аудиогида");
+    }
+
+    function toggleQuestHint() {
+      if (!selectedLocation) return;
+      const box = document.getElementById("locQuestHintBox");
+      box.textContent = "Подсказка: " + (selectedLocation.quest_hint || "Ответ содержится в исторической справке объекта.");
+      box.style.display = "block";
+    }
+
+    async function submitQuestAnswer() {
+      if (!selectedLocation) return;
+      const ans = document.getElementById("locQuestAnswerInput").value.trim();
+      if (!ans) return;
+
+      const res = await fetch("/api/quest/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          location_id: selectedLocation.id,
+          answer: ans
+        })
+      });
+      const data = await res.json();
+      const resBox = document.getElementById("locQuestResultBox");
+      resBox.style.display = "block";
+
+      if (data.correct) {
+        haptic("heavy");
+        resBox.style.color = "#34c759";
+        resBox.textContent = `Ответ верный. Ваш счёт: ${data.points} баллов.`;
+      } else {
+        haptic("medium");
+        resBox.style.color = "var(--tg-destructive)";
+        resBox.textContent = "Ответ неверный. Воспользуйтесь подсказкой.";
+      }
+    }
+
+    async function loadUserProgress() {
+      try {
+        await fetch(`/api/user_progress?user_id=${encodeURIComponent(currentUser.id)}`);
+      } catch (e) {}
+    }
+
+    function renderPersonaChat(locId) {
+      if (!personaHistories[locId]) {
+        personaHistories[locId] = [
+          {
+            role: "persona",
+            text: `Здравствуйте. Мы находимся у объекта «${selectedLocation.title}». Я — ${selectedLocation.persona_name || "очевидец эпохи"}. Задавайте ваш вопрос.`
+          }
+        ];
+      }
+      const box = document.getElementById("personaChatBox");
+      box.innerHTML = personaHistories[locId]
+        .map(m => `<div class="tg-bubble ${m.role === 'user' ? 'outgoing' : 'incoming'}">${m.text}</div>`)
+        .join("");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendPersonaMessage() {
+      if (!selectedLocation) return;
+      const input = document.getElementById("personaInput");
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+
+      const locId = selectedLocation.id;
+      personaHistories[locId].push({ role: "user", text });
+      renderPersonaChat(locId);
+
+      try {
+        const res = await fetch("/api/persona/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location_id: locId,
+            message: text,
+            history: personaHistories[locId]
+          })
+        });
+        const data = await res.json();
+        personaHistories[locId].push({ role: "persona", text: data.reply });
+        renderPersonaChat(locId);
+      } catch (e) {
+        personaHistories[locId].push({ role: "persona", text: "Сервис временно недоступен." });
+        renderPersonaChat(locId);
+      }
+    }
+
+    function useGpsForRoute() {
+      if (userGpsCoords) {
+        showToast("Используется ваша текущая геолокация");
+      } else {
+        locateUserGPS();
+      }
+    }
+
+    function toggleRouteCategory(cat, btn) {
+      haptic("light");
+      if (cat === "all") {
+        selectedRouteCategories = ["all"];
+      } else {
+        selectedRouteCategories = selectedRouteCategories.filter(c => c !== "all");
+        if (selectedRouteCategories.includes(cat)) {
+          selectedRouteCategories = selectedRouteCategories.filter(c => c !== cat);
+        } else {
+          selectedRouteCategories.push(cat);
+        }
+        if (selectedRouteCategories.length === 0) {
+          selectedRouteCategories = ["all"];
+        }
+      }
+      document.querySelectorAll("#routeCategoriesGrid .tg-route-cat-chip").forEach(el => {
+        const c = el.getAttribute("data-rcat");
+        el.classList.toggle("active", selectedRouteCategories.includes(c));
+      });
+    }
+
+    async function generateAiRoute() {
+      const btn = document.getElementById("btnBuildAiRoute");
+      btn.disabled = true;
+      btn.textContent = "Расчёт маршрута по времени...";
+
+      const city = document.getElementById("routeCityInput").value.trim() || "Гомель";
+      const query = document.getElementById("routePromptInput").value.trim();
+      const duration = parseInt(document.getElementById("routeDurationSelect").value, 10);
+      const transport = document.getElementById("routeTransportSelect").value;
+      const catsPayload = selectedRouteCategories.includes("all") ? [] : selectedRouteCategories;
+
+      try {
+        const payload = {
+          city,
+          user_query: query,
+          duration_minutes: duration,
+          transport_mode: transport,
+          categories: catsPayload,
+          user_lat: userGpsCoords ? userGpsCoords.lat : null,
+          user_lon: userGpsCoords ? userGpsCoords.lon : null
+        };
+        const res = await fetch("/api/routes/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const route = await res.json();
+        activeRouteData = route;
+        displayGeneratedRoute(route);
+      } catch (e) {
+        showToast("Не удалось построить маршрут");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Сформировать маршрут";
+      }
+    }
+
+    function displayGeneratedRoute(route) {
+      const card = document.getElementById("aiRouteResultCard");
+      card.style.display = "flex";
+      const districtsCount = (route.covered_districts || []).length;
+      const districtsNote = districtsCount > 1 ? ` · ${districtsCount} р-на/части города` : "";
+      document.getElementById("resRouteHeader").textContent = `Маршрут: ${route.city}`;
+      document.getElementById("resRouteStats").textContent =
+        `${route.stops.length} точек${districtsNote} · ~${route.total_distance_km} км · ~${route.estimated_minutes} мин (${route.transport_label})`;
+      document.getElementById("resRouteNarrative").textContent = route.ai_narrative;
+
+      const transportIcon = route.transport_mode === "car" ? "🚗" : (route.transport_mode === "bike" ? "🚲" : "🚶");
+      const stopsHtml = route.stops.map((s, idx) => {
+        const meta = categoryMeta[s.category] || categoryMeta.architecture;
+        const catLbl = s.category_label || meta.label;
+        const distLbl = s.district_label || "";
+        const legBadge = (idx > 0 && s.leg_time_min)
+          ? `<span class="tg-stop-badge">${transportIcon} +${s.leg_time_min} мин (${s.leg_distance_km} км)</span>`
+          : `<span class="tg-stop-badge">🏁 Старт · осмотр ~${s.stop_minutes || 6} мин</span>`;
+        return `
+        <div class="tg-cell">
+          <div class="tg-cell-row">
+            <div style="flex:1;min-width:0;padding-right:8px;">
+              <div class="tg-cell-title">${idx + 1}. ${s.title}</div>
+              <div class="tg-stop-badges">
+                ${legBadge}
+                ${distLbl ? `<span class="tg-stop-badge district">${distLbl}</span>` : ""}
+                <span class="tg-stop-badge">${catLbl}</span>
+              </div>
+              <div class="tg-cell-subtitle" style="margin-top:4px;">${s.quest_question || s.epoch}</div>
+            </div>
+            <button class="tg-bar-btn secondary" onclick='closeDrawer("aiGuideDrawer"); openLocationModal(${JSON.stringify(s).replace(/'/g, "&apos;")})'>
+              Открыть
+            </button>
+          </div>
+        </div>
+      `;
+      }).join("");
+      document.getElementById("resRouteStopsList").innerHTML = stopsHtml;
+
+      routeLineLayer.clearLayers();
+      const coords = route.stops.map(s => [s.lat, s.lon]);
+      if (coords.length > 1) {
+        L.polyline(coords, {
+          color: "#007aff",
+          weight: 4,
+          opacity: 0.85
+        }).addTo(routeLineLayer);
+      }
+
+      route.stops.forEach((s, idx) => {
+        const badge = L.divIcon({
+          html: `<div class="tg-route-step">${idx + 1}</div>`,
+          className: "",
+          iconSize: [24, 24],
+          iconAnchor: [-8, 28]
+        });
+        L.marker([s.lat, s.lon], { icon: badge }).addTo(routeLineLayer);
+      });
+
+      if (coords.length > 0) {
+        map.fitBounds(coords, { padding: [60, 60], maxZoom: 15 });
+      }
+
+      document.getElementById("routeFloatTitle").textContent = `Маршрут: ${route.city}`;
+      document.getElementById("routeFloatMeta").textContent =
+        `${route.stops.length} точек${districtsNote} · ${route.total_distance_km} км · ${route.estimated_minutes} мин`;
+      document.getElementById("routeFloatBar").classList.add("visible");
+      setActiveCity(route.city);
+      loadLocations(route.city, "", false);
+    }
+
+    function buildRouteToCurrentLocation() {
+      if (!selectedLocation) return;
+      closeDrawer("locationDrawer");
+      const startPoint = userGpsCoords
+        ? [userGpsCoords.lat, userGpsCoords.lon]
+        : [allLocations[0].lat, allLocations[0].lon];
+      const endPoint = [selectedLocation.lat, selectedLocation.lon];
+
+      routeLineLayer.clearLayers();
+      L.polyline([startPoint, endPoint], {
+        color: "#007aff",
+        weight: 4
+      }).addTo(routeLineLayer);
+      map.fitBounds([startPoint, endPoint], { padding: [60, 60] });
+      showToast(`Маршрут до «${selectedLocation.title}»`);
+    }
+
+    function clearActiveRoute() {
+      routeLineLayer.clearLayers();
+      activeRouteData = null;
+      document.getElementById("routeFloatBar").classList.remove("visible");
+    }
+
+    async function downloadCurrentRoutePDF() {
+      if (!activeRouteData) {
+        await generateAiRoute();
+      }
+      if (!activeRouteData) {
+        showToast("Сначала постройте маршрут");
+        return;
+      }
+      showToast("Формирование PDF-буклета...");
+      try {
+        const res = await fetch("/api/routes/export_pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            route: activeRouteData,
+            user_id: String((currentUser && currentUser.id) || "demo_user"),
+            base_url: window.location.origin
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const buf = await res.arrayBuffer();
+        const hdr = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
+        if (hdr.length < 4 || hdr[0] !== 0x25 || hdr[1] !== 0x50 || hdr[2] !== 0x44 || hdr[3] !== 0x46) {
+          throw new Error("Invalid PDF header");
+        }
+        const blob = new Blob([buf], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
+        const safeCity = String(activeRouteData.city || "Belarus").replace(/[\\/:*?"<>|]+/g, "_");
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Patriot_Route_${safeCity}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+        showToast("PDF-буклет успешно сохранён!");
+      } catch (e) {
+        console.error("PDF Export error:", e);
+        showToast("Ошибка при формировании PDF");
+      }
+    }
+
+    function populateLocationSelect(locations) {
+      const sel = document.getElementById("studioLocationSelect");
+      sel.innerHTML = `<option value="">Без привязки к объекту</option>` +
+        locations.map(l => `<option value="${l.id}">${l.title} (${l.city})</option>`).join("");
+    }
+
+    const _genProgressTimers = {};
+
+    function startGenProgress(prefix, expectedSec = 10) {
+      if (_genProgressTimers[prefix]) {
+        clearInterval(_genProgressTimers[prefix].intervalId);
+        clearTimeout(_genProgressTimers[prefix].hideTimeoutId);
+      }
+      const wrap = document.getElementById(`${prefix}ProgressWrap`);
+      const stageEl = document.getElementById(`${prefix}StageText`);
+      const pctEl = document.getElementById(`${prefix}PctText`);
+      const fillEl = document.getElementById(`${prefix}FillBar`);
+      const etaEl = document.getElementById(`${prefix}EtaText`);
+      if (!wrap || !stageEl || !pctEl || !fillEl || !etaEl) return;
+
+      wrap.style.display = "flex";
+      fillEl.style.width = "3%";
+      pctEl.textContent = "3%";
+      stageEl.textContent = "Подготовка снимка и очистка дефектов...";
+      etaEl.textContent = `Осталось ~${expectedSec} сек`;
+
+      const startTs = performance.now();
+      const intervalId = setInterval(() => {
+        const elapsed = (performance.now() - startTs) / 1000;
+        let pct;
+        if (elapsed <= expectedSec * 0.85) {
+          pct = 3 + (elapsed / (expectedSec * 0.85)) * 83;
+        } else {
+          const extra = elapsed - expectedSec * 0.85;
+          pct = 86 + 11 * (1 - Math.exp(-extra / 6.0));
+        }
+        pct = Math.min(97, Math.max(3, Math.round(pct)));
+        fillEl.style.width = `${pct}%`;
+        pctEl.textContent = `${pct}%`;
+
+        if (pct < 24) {
+          stageEl.textContent = "Анализ композиции и очистка дефектов...";
+        } else if (pct < 62) {
+          stageEl.textContent = "Нейросетевая реконструкция и колоризация (GPU)...";
+        } else if (pct < 86) {
+          stageEl.textContent = "Выравнивание света, неба и резкости деталей...";
+        } else {
+          stageEl.textContent = "Сжатие в WebP и сохранение результата...";
+        }
+
+        const rem = Math.ceil(expectedSec - elapsed);
+        if (rem > 1) {
+          etaEl.textContent = `Осталось ~${rem} сек`;
+        } else {
+          etaEl.textContent = "Осталось ~1 сек";
+        }
+      }, 160);
+
+      _genProgressTimers[prefix] = { intervalId, hideTimeoutId: null, startTs };
+    }
+
+    async function finishGenProgress(prefix, ok = true, elapsedSec = null) {
+      const state = _genProgressTimers[prefix];
+      if (state && state.intervalId) {
+        clearInterval(state.intervalId);
+      }
+      const wrap = document.getElementById(`${prefix}ProgressWrap`);
+      const stageEl = document.getElementById(`${prefix}StageText`);
+      const pctEl = document.getElementById(`${prefix}PctText`);
+      const fillEl = document.getElementById(`${prefix}FillBar`);
+      const etaEl = document.getElementById(`${prefix}EtaText`);
+      if (!wrap || !stageEl || !pctEl || !fillEl || !etaEl) return;
+
+      if (ok && state && state.startTs) {
+        const elapsedMs = performance.now() - state.startTs;
+        if (elapsedMs < 1600) {
+          fillEl.style.width = "48%";
+          pctEl.textContent = "48%";
+          stageEl.textContent = "Нейросетевая реконструкция и колоризация (GPU)...";
+          etaEl.textContent = "Осталось ~2 сек";
+          await new Promise(r => setTimeout(r, 520));
+
+          fillEl.style.width = "84%";
+          pctEl.textContent = "84%";
+          stageEl.textContent = "Выравнивание света, неба и резкости деталей...";
+          etaEl.textContent = "Осталось ~1 сек";
+          await new Promise(r => setTimeout(r, 480));
+        }
+      }
+
+      if (ok) {
+        fillEl.style.width = "100%";
+        pctEl.textContent = "100%";
+        stageEl.textContent = elapsedSec
+          ? `Реконструкция завершена (${elapsedSec} с)`
+          : "Реконструкция завершена";
+        etaEl.textContent = "Готово";
+      } else {
+        stageEl.textContent = "Ошибка обработки снимка";
+        etaEl.textContent = "Отменено";
+      }
+
+      const hideTimeoutId = setTimeout(() => {
+        wrap.style.display = "none";
+        fillEl.style.width = "0%";
+      }, ok ? 950 : 1400);
+      _genProgressTimers[prefix] = { intervalId: null, hideTimeoutId, startTs: 0 };
+    }
+
+    async function restoreSelectedGalleryPhoto() {
+      if (!selectedLocation || !currentGalleryPhotos.length) return;
+      const locId = selectedLocation.id;
+
+      const curItem = currentGalleryPhotos[currentPhotoIndex];
+      if (!curItem.is_archival) {
+        const archIdx = currentGalleryPhotos.findIndex(p => p.is_archival);
+        if (archIdx !== -1) {
+          currentPhotoIndex = archIdx;
+          renderLocationGallery(false);
+        }
+      }
+
+      const btnFind = document.getElementById("btnFindLocPhoto");
+      const btnGpu = document.getElementById("btnGpuLocPhoto");
+      if (btnFind) btnFind.disabled = true;
+      if (btnGpu) {
+        btnGpu.disabled = true;
+        btnGpu.textContent = "ИИ-реставрация (локальная модель)...";
+      }
+
+      startGenProgress("locGen", 3);
+      let ok = false;
+      let elapsedSec = null;
+
+      try {
+        let data = null;
+        try {
+          const res = await fetch(`/api/locations/${locId}/restore_gallery_photo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              photo_index: currentPhotoIndex
+            })
+          });
+          data = await res.json();
+        } catch (netErr) {
+          await new Promise(r => setTimeout(r, 1500));
+          try {
+            const checkRes = await fetch(`/api/locations?city=${encodeURIComponent(activeCity)}`);
+            const checkData = await checkRes.json();
+            const updatedLoc = (checkData.locations || []).find(l => l.id === locId);
+            if (updatedLoc && updatedLoc.photos && updatedLoc.photos[currentPhotoIndex] && updatedLoc.photos[currentPhotoIndex].restored_url) {
+              data = { status: "ok", photos: updatedLoc.photos, photo_index: currentPhotoIndex, elapsed_sec: "8.2" };
+            } else {
+              const retryRes = await fetch(`/api/locations/${locId}/restore_gallery_photo`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ photo_index: currentPhotoIndex })
+              });
+              data = await retryRes.json();
+            }
+          } catch (retryErr) {
+            throw netErr;
+          }
+        }
+
+        if (data && data.status === "ok" && data.photos) {
+          ok = true;
+          elapsedSec = data.elapsed_sec;
+          await finishGenProgress("locGen", true, elapsedSec);
+          haptic("heavy");
+          currentGalleryPhotos = data.photos;
+          selectedLocation.photos = data.photos;
+          if (typeof data.photo_index === "number") {
+            currentPhotoIndex = data.photo_index;
+          }
+          renderLocationGallery(true);
+          showToast(`ИИ-реконструкция завершена (${data.elapsed_sec} с)`);
+          loadLocations(activeCity, "", false);
+        } else {
+          await finishGenProgress("locGen", false, null);
+          showToast("Не удалось отреставрировать снимок");
+        }
+      } catch (e) {
+        await finishGenProgress("locGen", false, null);
+        showToast("Ошибка при генерации на GPU");
+      } finally {
+        if (btnFind) btnFind.disabled = false;
+        if (btnGpu) btnGpu.disabled = false;
+        renderLocationGallery(true);
+      }
+    }
+
+    async function refreshLocationPhoto() {
+      if (!selectedLocation) return;
+      const locId = selectedLocation.id;
+      const btnFind = document.getElementById("btnFindLocPhoto");
+      const btnGpu = document.getElementById("btnGpuLocPhoto");
+      if (btnFind) btnFind.disabled = true;
+      if (btnGpu) btnGpu.disabled = true;
+
+      showToast("Поиск фотографий объекта (современных и архивных)...", 6000);
+
+      try {
+        const res = await fetch(`/api/locations/${locId}/find_photo`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.status === "ok" && data.photos && data.photos.length) {
+          haptic("heavy");
+          currentGalleryPhotos = data.photos;
+          selectedLocation.photos = data.photos;
+          currentPhotoIndex = 0;
+          renderLocationGallery(true);
+          showToast(`Загружено фотографий: ${data.photos.length}`);
+          loadLocations(activeCity, "", false);
+        } else {
+          showToast("Не удалось обновить галерею");
+        }
+      } catch (e) {
+        showToast("Ошибка при поиске фотографий");
+      } finally {
+        if (btnFind) btnFind.disabled = false;
+        if (btnGpu) btnGpu.disabled = false;
+      }
+    }
+
+    let studioVariantCounter = 0;
+
+    async function searchAndRestoreInStudio() {
+      const locId = document.getElementById("studioLocationSelect").value;
+      const query = document.getElementById("studioPhotoTitle").value.trim();
+
+      if (!locId && !query) {
+        showToast("Выберите объект из списка или введите название для поиска");
+        return;
+      }
+
+      const btn = document.getElementById("btnSearchAndRestore");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Поиск архива и генерация на GPU...";
+      }
+      startGenProgress("studioGen", 11);
+      let ok = false;
+      let elapsedSec = null;
+
+      try {
+        const res = await fetch("/api/search_and_restore_photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location_id: locId || null,
+            query: query,
+            variant_index: studioVariantCounter++,
+            update_location_photos: Boolean(locId)
+          })
+        });
+        const data = await res.json();
+        ok = true;
+        elapsedSec = data.elapsed_sec;
+        haptic("heavy");
+
+        const box = document.getElementById("studioResultBox");
+        box.style.display = "flex";
+        document.getElementById("studioBeforeImg").src = _resolveUrl(data.original_photo_url);
+        document.getElementById("studioAfterImg").src = _resolveUrl(data.restored_photo_url);
+        document.getElementById("studioPipelineMeta").textContent = `Результат (${data.pipeline}, ${data.elapsed_sec} с)`;
+        setTimeout(() => {
+          updateBaSlider("studioBaRange", "studioBeforeLayer", "studioBaHandle", "studioBeforeImg", "studioBaContainer");
+        }, 80);
+
+        if (locId) {
+          showToast(`Архивное фото отреставрировано и добавлено в галерею (${data.elapsed_sec} с)`);
+          loadLocations(activeCity, "", false);
+        } else {
+          showToast(`ИИ-реконструкция выполнена (${data.elapsed_sec} с)`);
+        }
+      } catch (e) {
+        showToast("Ошибка при поиске и реставрации снимка");
+      } finally {
+        finishGenProgress("studioGen", ok, elapsedSec);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Найти фото в сети и отреставрировать (GPU)";
+        }
+      }
+    }
+
+    async function uploadAndRestorePhoto(fromLocationModal) {
+      const fileInput = fromLocationModal
+        ? document.getElementById("locCrowdFile")
+        : document.getElementById("studioFileInput");
+
+      if (!fileInput.files || !fileInput.files[0]) {
+        showToast("Выберите файл изображения на устройстве");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("user_id", currentUser.id);
+      formData.append("user_name", currentUser.name);
+
+      if (fromLocationModal && selectedLocation) {
+        formData.append("location_id", selectedLocation.id);
+        formData.append("title", `Архив: ${selectedLocation.title}`);
+        formData.append("update_location_photos", "true");
+      } else {
+        const locId = document.getElementById("studioLocationSelect").value;
+        const title = document.getElementById("studioPhotoTitle").value.trim() || "Архивный снимок";
+        if (locId) formData.append("location_id", locId);
+        formData.append("title", title);
+        formData.append("update_location_photos", locId ? "true" : "false");
+      }
+
+      const progPrefix = fromLocationModal ? "crowdGen" : "studioGen";
+      startGenProgress(progPrefix, 3);
+      const btn = fromLocationModal
+        ? document.getElementById("btnCrowdRestore")
+        : document.getElementById("btnRunStudioRestore");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "ИИ-реставрация (локальная модель)...";
+      }
+      let ok = false;
+      let elapsedSec = null;
+
+      try {
+        const res = await fetch("/api/restore_photo", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        ok = true;
+        elapsedSec = data.elapsed_sec;
+        haptic("heavy");
+
+        if (fromLocationModal && selectedLocation) {
+          const newItem = {
+            url: _resolveUrl(data.original_photo_url),
+            restored_url: _resolveUrl(data.restored_photo_url),
+            is_archival: true,
+            caption: "Загруженный архивный снимок"
+          };
+          currentGalleryPhotos.unshift(newItem);
+          currentPhotoIndex = 0;
+          selectedLocation.photos = currentGalleryPhotos;
+          renderLocationGallery(true);
+          switchLocTab("info", document.querySelector("#locationDrawer .tg-segment"));
+          showToast(`Готово (${data.elapsed_sec} с)`);
+        } else {
+          const box = document.getElementById("studioResultBox");
+          box.style.display = "flex";
+          document.getElementById("studioBeforeImg").src = _resolveUrl(data.original_photo_url);
+          document.getElementById("studioAfterImg").src = _resolveUrl(data.restored_photo_url);
+          document.getElementById("studioPipelineMeta").textContent = `Результат (${data.pipeline}, ${data.elapsed_sec} с)`;
+          setTimeout(() => {
+            updateBaSlider("studioBaRange", "studioBeforeLayer", "studioBaHandle", "studioBeforeImg", "studioBaContainer");
+          }, 80);
+          showToast(`ИИ-реконструкция завершена за ${data.elapsed_sec} с`);
+        }
+        loadLocations(activeCity, "", false);
+      } catch (e) {
+        showToast("Ошибка обработки изображения");
+      } finally {
+        finishGenProgress(progPrefix, ok, elapsedSec);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = fromLocationModal
+            ? "Восстановить и привязать к локации"
+            : "Восстановить загруженный файл";
+        }
+      }
+    }
+
+    function pickCoordsOnMap() {
+      pickingAdminCoords = true;
+      closeDrawer("adminDrawer");
+      showToast("Нажмите на карту для выбора точки");
+    }
+
+    async function saveNewLocationFromAdmin() {
+      const title = document.getElementById("admTitle").value.trim();
+      if (!title) {
+        showToast("Укажите название объекта");
+        return;
+      }
+      const payload = {
+        title,
+        city: document.getElementById("admCity").value.trim() || "Гомель",
+        category: document.getElementById("admCategory").value,
+        epoch: document.getElementById("admEpoch").value.trim() || "XX век",
+        historical_person: document.getElementById("admPerson").value.trim(),
+        lat: parseFloat(document.getElementById("admLat").value),
+        lon: parseFloat(document.getElementById("admLon").value),
+        short_description: document.getElementById("admDesc").value.trim() || title,
+        full_history: document.getElementById("admDesc").value.trim() || title,
+        quest_question: document.getElementById("admQuestQ").value.trim(),
+        quest_answer: document.getElementById("admQuestA").value.trim(),
+        persona_name: document.getElementById("admPersona").value.trim() || "Хранитель истории"
+      };
+
+      const res = await fetch("/api/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const created = await res.json();
+      closeDrawer("adminDrawer");
+      await loadLocations();
+      map.setView([created.lat, created.lon], 16);
+      showToast(`Объект «${created.title}» добавлен`);
+    }
+
+    function enterKioskMode() {
+      document.body.classList.add("kiosk-mode");
+      closeDrawer("adminDrawer");
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      showToast("Включён режим терминала (PIN: 1945)");
+    }
+
+    function promptExitKiosk() {
+      const pin = prompt("Введите PIN-код администратора для выхода (1945):");
+      if (pin === "1945") {
+        document.body.classList.remove("kiosk-mode");
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        showToast("Режим терминала отключён");
+      } else if (pin !== null) {
+        showToast("Неверный PIN-код");
+      }
+    }
+
+    function openDrawer(id) {
+      document.querySelectorAll(".tg-sheet-overlay").forEach(d => {
+        if (d.id !== id) d.classList.remove("open");
+      });
+      const overlay = document.getElementById(id);
+      if (!overlay) return;
+      const sheet = overlay.querySelector(".tg-sheet");
+      if (sheet) {
+        sheet.style.transition = "";
+        sheet.style.transform = "";
+      }
+      requestAnimationFrame(() => {
+        overlay.classList.add("open");
+        if (id === "locationDrawer") {
+          delete _containerWidthCache["locBaContainer"];
+          updateBaSlider("locBaRange", "locBeforeLayer", "locBaHandle", "locPhotoBefore", "locBaContainer");
+        } else if (id === "restoreDrawer") {
+          delete _containerWidthCache["studioBaContainer"];
+          updateBaSlider("studioBaRange", "studioBeforeLayer", "studioBaHandle", "studioBeforeImg", "studioBaContainer");
+        }
+      });
+      if (tg && tg.BackButton) tg.BackButton.show();
+    }
+
+    function closeDrawer(id) {
+      const overlay = document.getElementById(id);
+      if (overlay) {
+        const sheet = overlay.querySelector(".tg-sheet");
+        if (sheet) {
+          sheet.style.transition = "";
+          sheet.style.transform = "";
+        }
+        overlay.classList.remove("open");
+      }
+      if (id === "locationDrawer") {
+        document.querySelectorAll(".tg-marker.selected").forEach(el => el.classList.remove("selected"));
+      }
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      if (tg && tg.BackButton) tg.BackButton.hide();
+    }
+
+    function switchNav(tab, btn) {
+      haptic("light");
+      document.querySelectorAll(".tg-tab").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      if (tab === "map") {
+        document.querySelectorAll(".tg-sheet-overlay").forEach(d => closeDrawer(d.id));
+        if (tg && tg.BackButton) tg.BackButton.hide();
+      }
+    }
+
+    (function initSheetSwipeDismiss() {
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".tg-sheet-overlay").forEach((overlay) => {
+          const sheet = overlay.querySelector(".tg-sheet");
+          const header = overlay.querySelector(".tg-sheet-header");
+          const grabber = overlay.querySelector(".tg-sheet-grabber");
+          if (!sheet || !header) return;
+
+          let startY = 0;
+          let currentDy = 0;
+          let dragging = false;
+
+          const onStart = (e) => {
+            if (!e.touches || !e.touches.length) return;
+            if (e.target && e.target.closest(".tg-close-btn")) return;
+            startY = e.touches[0].clientY;
+            currentDy = 0;
+            dragging = true;
+            sheet.style.transition = "none";
+          };
+
+          const onMove = (e) => {
+            if (!dragging || !e.touches || !e.touches.length) return;
+            const dy = e.touches[0].clientY - startY;
+            currentDy = Math.max(0, dy);
+            sheet.style.transform = `translate3d(0, ${currentDy}px, 0)`;
+          };
+
+          const onEnd = () => {
+            if (!dragging) return;
+            dragging = false;
+            sheet.style.transition = "transform 0.36s cubic-bezier(0.32, 0.72, 0, 1)";
+            if (currentDy > 85) {
+              haptic("light");
+              closeDrawer(overlay.id);
+            } else {
+              sheet.style.transform = "";
+            }
+          };
+
+          [header, grabber].forEach((handleEl) => {
+            if (!handleEl) return;
+            handleEl.addEventListener("touchstart", onStart, { passive: true });
+            handleEl.addEventListener("touchmove", onMove, { passive: true });
+            handleEl.addEventListener("touchend", onEnd, { passive: true });
+          });
+        });
+      });
+    })();
+
+    window.addEventListener("DOMContentLoaded", initMap);
+  </script>
+</body>
+</html>
